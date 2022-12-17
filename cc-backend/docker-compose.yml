@@ -1,0 +1,83 @@
+# This docker-compose file is used when the backend is alone run as a docker container 
+# but the front end is run in development mode
+
+version: "3.9"
+   
+services:
+
+# mysql database container
+  db:
+    volumes:
+    # mysql dump file used for initialistaion
+      - /home/sakthi/testappsql:/docker-entrypoint-initdb.d
+    container_name: mysql_container_cc
+   
+    image: mysql:8.0.17
+    environment:
+      MYSQL_ROOT_PASSWORD: helloworld
+      MYSQL_DATABASE: testapp
+     
+    ports:
+      - "3307:3306"
+    
+    networks:
+      - cc-backend-app
+
+# django application
+  web:
+    build: .
+
+    # development server start command
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/ping:/usr/bin/ping
+      - /usr/bin/telnet:/usr/bin/telnet
+      - /usr/bin/ssh-keygen:/usr/bin/ssh-keygen
+      - /etc/localtime:/etc/localtime:ro
+      - /usr/bin/ssh:/usr/bin/ssh
+    ports:
+      - "8000:8000"
+    environment:
+      MYSQL_ROOT_PASSWORD: helloworld
+      MYSQL_DATABASE: testapp
+    
+    networks:
+      - cc-backend-app
+    depends_on:
+      - db
+    
+    restart: always
+
+#  web terminal container required for container login feature
+  web-tty:
+    image: wrfly/container-web-tty:latest
+    ports:
+      - 8080:8080
+    environment:
+      - WEB_TTY_DEBUG=false
+      - DOCKER_HOST=/var/run/docker.sock
+     
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/ssh:/bin/ssh
+      - /usr/bin/ping:/usr/bin/ping
+      - /usr/bin/telnet:/usr/bin/telnet
+    depends_on:
+      - web
+      - db
+    networks:
+      - cc-backend-app
+
+networks:
+  cc-backend-app:
+    driver: bridge
+
+volumes:
+  cc-backend-app:
+    driver: local
+
+
+
+
